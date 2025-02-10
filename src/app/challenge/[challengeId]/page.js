@@ -57,7 +57,7 @@ export default function ChallengePage() {
       };
 
       const response = await fetch(
-        "http://51.20.253.201:2358/submissions?wait=true",
+        "http://localhost:2358/submissions?wait=true",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
