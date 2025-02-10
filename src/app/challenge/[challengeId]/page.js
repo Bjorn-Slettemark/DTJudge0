@@ -57,7 +57,7 @@ export default function ChallengePage() {
       };
 
       const response = await fetch(
-        "http://localhost:2358/submissions?wait=true",
+        "https://dt.strimo.no/api/submissions?wait=true",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
