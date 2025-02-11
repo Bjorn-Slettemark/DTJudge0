@@ -76,8 +76,10 @@ export default function ChallengePage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center p-4">
-      <div className="w-full max-w-5xl bg-white shadow-md rounded-lg overflow-hidden">
+    // Removed centering classes so that the content takes full width
+    <div className="min-h-screen bg-white p-4">
+      {/* Changed w-full max-w-5xl to just w-full */}
+      <div className="w-full bg-white shadow-md rounded-lg overflow-hidden">
         <div className="flex flex-col md:flex-row">
           {/* Code Editor Section */}
           <div className="flex-1 p-4 border-b md:border-b-0 md:border-r border-gray-200">
