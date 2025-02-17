@@ -18,22 +18,6 @@ export const generalizedFizzBuzzChallenge = {
     defaultCode: `function main() {
     // Read the input values
     const [n, a, b] = readline().trim().split(' ').map(Number);
-
-    let fizzCount = 0, buzzCount = 0, fizzBuzzCount = 0;
-
-    // Loop from 1 to n
-    for (let i = 1; i <= n; i++) {
-        if (i % a === 0 && i % b === 0) {
-            fizzBuzzCount++;
-        } else if (i % a === 0) {
-            fizzCount++;
-        } else if (i % b === 0) {
-            buzzCount++;
-        }
-    }
-
-    // Output the counts
-    console.log(fizzCount, buzzCount, fizzBuzzCount);
 }`,
 
     testCases: [
