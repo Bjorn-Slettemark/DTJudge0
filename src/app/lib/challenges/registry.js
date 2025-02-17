@@ -6,15 +6,21 @@ import { whichIsGreaterChallenge } from './3-which-is-greater';
 import { oddEchoChallenge } from './4-odd-echo';
 import { sortNumbersChallenge } from './5-sort-numbers';
 import { hippHurraChallenge } from './6-hipp-hurra';
+import { generalizedFizzBuzzChallenge } from './7-generalizedFizzBuzz';
+import { helloWorldChallenge } from './0-hello-world';
 
 // Map challenges to their numeric IDs
 export const challenges = {
+    
+    "0": helloWorldChallenge,
+
     "1": echoChallenge,
     "2": addNumbersChallenge,
     "3": whichIsGreaterChallenge,
     "4": oddEchoChallenge,
     "5": sortNumbersChallenge,
-    "6": hippHurraChallenge
+    "6": hippHurraChallenge,
+    "7": generalizedFizzBuzzChallenge
 
 
 };

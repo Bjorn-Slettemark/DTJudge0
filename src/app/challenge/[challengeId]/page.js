@@ -1,4 +1,3 @@
-// src/app/challenge/[challengeId]/page.js
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -12,6 +11,9 @@ import { preprocessCode } from '../../lib/judge-wrapper';
 import "ace-builds/src-noconflict/mode-javascript";
 import "ace-builds/src-noconflict/theme-github";
 
+// Import confetti animation
+import ReactConfetti from 'react-confetti';
+
 export default function ChallengePage() {
   const { challengeId } = useParams();
   const [code, setCode] = useState("");
@@ -19,6 +21,29 @@ export default function ChallengePage() {
   const [loading, setLoading] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [challenge, setChallenge] = useState(null);
+  const [confetti, setConfetti] = useState(false); // State to trigger confetti
+  const [width, setWidth] = useState(0);
+  const [height, setHeight] = useState(0);
+
+  // Only run the following code on the client side
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setWidth(window.innerWidth);
+      setHeight(window.innerHeight);
+
+      // Update width and height on window resize
+      const handleResize = () => {
+        setWidth(window.innerWidth);
+        setHeight(window.innerHeight);
+      };
+
+      window.addEventListener('resize', handleResize);
+
+      return () => {
+        window.removeEventListener('resize', handleResize);
+      };
+    }
+  }, []);
 
   useEffect(() => {
     const currentChallenge = getChallenge(challengeId);
@@ -38,6 +63,7 @@ export default function ChallengePage() {
     setAttempts((prev) => prev + 1);
     setLoading(true);
     setFeedback(null);
+    setConfetti(false); // Reset confetti
 
     try {
       // Run all test cases
@@ -77,6 +103,10 @@ export default function ChallengePage() {
         testResults: results,
         currentTest: firstFailed?.index || results.length
       });
+
+      if (allPassed) {
+        setConfetti(true); // Trigger confetti when all tests pass
+      }
     } catch (error) {
       console.error(error);
       setFeedback({ error: error.message });
@@ -89,8 +119,6 @@ export default function ChallengePage() {
     return <div className="p-4">Challenge not found</div>;
   }
 
-  const difficulties = getDifficulties();
-
     return (
       <div className="min-h-screen bg-white p-4">
         <div className="w-full bg-white shadow-md rounded-lg overflow-hidden">
@@ -98,9 +126,6 @@ export default function ChallengePage() {
           <div className="p-4 border-b border-gray-200">
             <div className="flex items-center justify-between mb-2">
               <h1 className="text-2xl font-bold text-gray-800">{challenge.title}</h1>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${difficulties[challenge.difficulty]}`}>
-                {challenge.difficulty}
-              </span>
             </div>
             <p className="text-gray-600 whitespace-pre-wrap">{challenge.description}</p>
           </div>
@@ -197,6 +222,9 @@ export default function ChallengePage() {
             </div>
           </div>
         </div>
+
+        {/* Confetti animation trigger */}
+        {confetti && <ReactConfetti width={width} height={height} />}
       </div>
     );
 }
