@@ -3,26 +3,12 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import AceEditor from "react-ace";
+import { getChallenge, validateSubmission, getDifficulties } from "./challenges";
+import { preprocessCode } from '../../judge-wrapper';
 
-// Import Ace mode and theme.
+// Import Ace modes and themes
 import "ace-builds/src-noconflict/mode-javascript";
 import "ace-builds/src-noconflict/theme-github";
-
-// Sample challenges mapping.
-const challenges = {
-  "1": {
-    description: 'Print "Hello, World!" using console.log',
-    defaultCode: `// Write code to print "Hello, World!"\nconsole.log("Hello, World!");`,
-    expected_output: "Hello, World!\n",
-    language_id: 63,
-  },
-  "2": {
-    description: "Print the sum of 3 and 4",
-    defaultCode: `// Write code to print the sum of 3 and 4\nconsole.log(3 + 4);`,
-    expected_output: "7\n",
-    language_id: 63,
-  },
-};
 
 export default function ChallengePage() {
   const { challengeId } = useParams();
@@ -30,30 +16,35 @@ export default function ChallengePage() {
   const [feedback, setFeedback] = useState(null);
   const [loading, setLoading] = useState(false);
   const [attempts, setAttempts] = useState(0);
+  const [challenge, setChallenge] = useState(null);
 
   useEffect(() => {
-    if (challenges[challengeId]) {
-      setCode(challenges[challengeId].defaultCode);
+    const currentChallenge = getChallenge(challengeId);
+    if (currentChallenge) {
+      setChallenge(currentChallenge);
+      setCode(currentChallenge.defaultCode);
     } else {
-      setCode("// Unknown challenge.");
+      setCode("// Challenge not found.");
     }
     setAttempts(0);
     setFeedback(null);
   }, [challengeId]);
 
   const handleRun = async () => {
+    if (!challenge) return;
+    
     setAttempts((prev) => prev + 1);
     setLoading(true);
     setFeedback(null);
-    try {
-      const challenge = challenges[challengeId];
-      if (!challenge) throw new Error("Invalid challenge id.");
 
+    try {
+      // Run against first test case
+      const testCase = challenge.testCases[0];
       const payload = {
         language_id: challenge.language_id,
-        source_code: code,
-        stdin: "",
-        expected_output: challenge.expected_output,
+        source_code: preprocessCode(code),
+        stdin: testCase.input,
+        expected_output: testCase.expected_output,
       };
 
       const response = await fetch(
@@ -64,8 +55,9 @@ export default function ChallengePage() {
           body: JSON.stringify(payload),
         }
       );
+      
       const result = await response.json();
-      const pass = result.stdout === challenge.expected_output;
+      const pass = validateSubmission(challenge, result);
       setFeedback({ result, pass });
     } catch (error) {
       console.error(error);
@@ -75,11 +67,26 @@ export default function ChallengePage() {
     }
   };
 
+  if (!challenge) {
+    return <div className="p-4">Challenge not found</div>;
+  }
+
+  const difficulties = getDifficulties();
+
   return (
-    // Removed centering classes so that the content takes full width
     <div className="min-h-screen bg-white p-4">
-      {/* Changed w-full max-w-5xl to just w-full */}
       <div className="w-full bg-white shadow-md rounded-lg overflow-hidden">
+        {/* Challenge Header */}
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-2xl font-bold text-gray-800">{challenge.title}</h1>
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${difficulties[challenge.difficulty]}`}>
+              {challenge.difficulty}
+            </span>
+          </div>
+          <p className="text-gray-600 whitespace-pre-wrap">{challenge.description}</p>
+        </div>
+
         <div className="flex flex-col md:flex-row">
           {/* Code Editor Section */}
           <div className="flex-1 p-4 border-b md:border-b-0 md:border-r border-gray-200">
@@ -94,9 +101,14 @@ export default function ChallengePage() {
                 onChange={setCode}
                 value={code}
                 width="100%"
-                height="300px"
+                height="400px"
                 fontSize={14}
-                setOptions={{ useWorker: false }}
+                setOptions={{
+                  useWorker: false,
+                  enableBasicAutocompletion: true,
+                  enableLiveAutocompletion: true,
+                  showPrintMargin: false,
+                }}
               />
             </div>
             <button
@@ -107,6 +119,7 @@ export default function ChallengePage() {
               {loading ? "Running..." : "Run Code"}
             </button>
           </div>
+
           {/* Status / Feedback Panel */}
           <div className="w-full md:w-1/3 p-4">
             <h2 className="text-xl font-medium text-gray-800 mb-3">Status</h2>
@@ -137,18 +150,24 @@ export default function ChallengePage() {
                     <span>{attempts}</span>
                   </div>
                   <div>
-                    <span className="font-medium block mb-1">
-                      Output:
-                    </span>
-                    <div className="p-3 bg-gray-50 rounded border border-gray-200 h-32 overflow-auto text-sm">
+                    <span className="font-medium block mb-1">Output:</span>
+                    <div className="p-3 bg-gray-50 rounded border border-gray-200 h-32 overflow-auto text-sm font-mono">
                       {feedback.result.stdout}
                     </div>
                   </div>
+                  {!feedback.pass && (
+                    <div>
+                      <span className="font-medium block mb-1">Expected:</span>
+                      <div className="p-3 bg-gray-50 rounded border border-gray-200 overflow-auto text-sm font-mono">
+                        {challenge.testCases[0].expected_output}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             ) : (
               <div className="flex items-center justify-center h-32 border border-dashed border-gray-300 rounded text-gray-500 text-base">
-                No feedback yet.
+                No feedback yet. Run your code to see results.
               </div>
             )}
           </div>
