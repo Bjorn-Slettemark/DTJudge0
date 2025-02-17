@@ -1,10 +1,12 @@
+// src/app/challenge/[challengeId]/page.js
 "use client";
 
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import AceEditor from "react-ace";
-import { getChallenge, validateSubmission, getDifficulties } from "./challenges";
-import { preprocessCode } from '../../judge-wrapper';
+// Update imports to use the correct paths
+import { getChallenge, validateSubmission, getDifficulties } from "../../lib/challenges/registry";
+import { preprocessCode } from '../../lib/judge-wrapper';
 
 // Import Ace modes and themes
 import "ace-builds/src-noconflict/mode-javascript";
@@ -38,27 +40,43 @@ export default function ChallengePage() {
     setFeedback(null);
 
     try {
-      // Run against first test case
-      const testCase = challenge.testCases[0];
-      const payload = {
-        language_id: challenge.language_id,
-        source_code: preprocessCode(code),
-        stdin: testCase.input,
-        expected_output: testCase.expected_output,
-      };
+      // Run all test cases
+      const results = await Promise.all(challenge.testCases.map(async (testCase, index) => {
+        const payload = {
+          language_id: challenge.language_id,
+          source_code: preprocessCode(code),
+          stdin: testCase.input,
+          expected_output: testCase.expected_output,
+        };
 
-      const response = await fetch(
-        "https://dt.strimo.no/api/submissions?wait=true",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-      
-      const result = await response.json();
-      const pass = validateSubmission(challenge, result);
-      setFeedback({ result, pass });
+        const response = await fetch(
+          "https://dt.strimo.no/api/submissions?wait=true",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }
+        );
+        
+        const result = await response.json();
+        return {
+          testCase,
+          result,
+          pass: result.stdout === testCase.expected_output,
+          index: index + 1
+        };
+      }));
+
+      // Check if all test cases passed
+      const allPassed = results.every(r => r.pass);
+      const firstFailed = results.find(r => !r.pass);
+
+      setFeedback({ 
+        result: firstFailed?.result || results[0].result,
+        pass: allPassed,
+        testResults: results,
+        currentTest: firstFailed?.index || results.length
+      });
     } catch (error) {
       console.error(error);
       setFeedback({ error: error.message });
@@ -73,106 +91,112 @@ export default function ChallengePage() {
 
   const difficulties = getDifficulties();
 
-  return (
-    <div className="min-h-screen bg-white p-4">
-      <div className="w-full bg-white shadow-md rounded-lg overflow-hidden">
-        {/* Challenge Header */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-2">
-            <h1 className="text-2xl font-bold text-gray-800">{challenge.title}</h1>
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${difficulties[challenge.difficulty]}`}>
-              {challenge.difficulty}
-            </span>
-          </div>
-          <p className="text-gray-600 whitespace-pre-wrap">{challenge.description}</p>
-        </div>
-
-        <div className="flex flex-col md:flex-row">
-          {/* Code Editor Section */}
-          <div className="flex-1 p-4 border-b md:border-b-0 md:border-r border-gray-200">
-            <h2 className="text-xl font-medium text-gray-800 mb-3">
-              Code Editor
-            </h2>
-            <div className="border border-gray-200 rounded-md overflow-hidden">
-              <AceEditor
-                mode="javascript"
-                theme="github"
-                name="code-editor"
-                onChange={setCode}
-                value={code}
-                width="100%"
-                height="400px"
-                fontSize={14}
-                setOptions={{
-                  useWorker: false,
-                  enableBasicAutocompletion: true,
-                  enableLiveAutocompletion: true,
-                  showPrintMargin: false,
-                }}
-              />
+    return (
+      <div className="min-h-screen bg-white p-4">
+        <div className="w-full bg-white shadow-md rounded-lg overflow-hidden">
+          {/* Challenge Header */}
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-2">
+              <h1 className="text-2xl font-bold text-gray-800">{challenge.title}</h1>
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${difficulties[challenge.difficulty]}`}>
+                {challenge.difficulty}
+              </span>
             </div>
-            <button
-              onClick={handleRun}
-              disabled={loading}
-              className="mt-4 w-full py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded transition-colors duration-200"
-            >
-              {loading ? "Running..." : "Run Code"}
-            </button>
+            <p className="text-gray-600 whitespace-pre-wrap">{challenge.description}</p>
           </div>
-
-          {/* Status / Feedback Panel */}
-          <div className="w-full md:w-1/3 p-4">
-            <h2 className="text-xl font-medium text-gray-800 mb-3">Status</h2>
-            {feedback ? (
-              feedback.error ? (
-                <div className="text-red-500 font-medium text-base">
-                  {feedback.error}
-                </div>
-              ) : (
-                <div className="space-y-3 text-base text-gray-700">
-                  <div className="flex items-center">
-                    <span className="font-medium mr-2">Status:</span>
-                    <span>
-                      {feedback.result.status.description}{" "}
-                      {feedback.pass ? (
-                        <span className="text-green-500">✅</span>
-                      ) : (
-                        <span className="text-red-500">❌</span>
-                      )}
-                    </span>
+  
+          <div className="flex flex-col md:flex-row">
+            {/* Code Editor Section */}
+            <div className="flex-1 p-4 border-b md:border-b-0 md:border-r border-gray-200">
+              <h2 className="text-xl font-medium text-gray-800 mb-3">
+                Code Editor
+              </h2>
+              <div className="border border-gray-200 rounded-md overflow-hidden">
+                <AceEditor
+                  mode="javascript"
+                  theme="github"
+                  name="code-editor"
+                  onChange={setCode}
+                  value={code}
+                  width="100%"
+                  height="400px"
+                  fontSize={14}
+                  setOptions={{
+                    useWorker: false,
+                    enableBasicAutocompletion: true,
+                    enableLiveAutocompletion: true,
+                    showPrintMargin: false,
+                  }}
+                />
+              </div>
+              <button
+                onClick={handleRun}
+                disabled={loading}
+                className="mt-4 w-full py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded transition-colors duration-200"
+              >
+                {loading ? "Running..." : "Run Code"}
+              </button>
+            </div>
+  
+            {/* Status / Feedback Panel */}
+            <div className="w-full md:w-1/3 p-4">
+              <h2 className="text-xl font-medium text-gray-800 mb-3">Status</h2>
+              {feedback ? (
+                feedback.error ? (
+                  <div className="text-red-500 font-medium text-base">
+                    {feedback.error}
                   </div>
-                  <div>
-                    <span className="font-medium mr-2">Time:</span>
-                    <span>{feedback.result.time} sec</span>
-                  </div>
-                  <div>
-                    <span className="font-medium mr-2">Attempts:</span>
-                    <span>{attempts}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium block mb-1">Output:</span>
-                    <div className="p-3 bg-gray-50 rounded border border-gray-200 h-32 overflow-auto text-sm font-mono">
-                      {feedback.result.stdout}
-                    </div>
-                  </div>
-                  {!feedback.pass && (
-                    <div>
-                      <span className="font-medium block mb-1">Expected:</span>
-                      <div className="p-3 bg-gray-50 rounded border border-gray-200 overflow-auto text-sm font-mono">
-                        {challenge.testCases[0].expected_output}
+                ) : (
+                  <div className="space-y-3 text-base text-gray-700">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded border border-gray-200">
+                      <span className="font-medium">Status:</span>
+                      <div>
+                        {feedback.pass ? (
+                          <span className="text-green-500 font-medium">✅ All Tests Passed</span>
+                        ) : (
+                          <span className="text-red-500 font-medium">❌ Some Tests Failed</span>
+                        )}
                       </div>
                     </div>
-                  )}
+                    
+                    <div className="flex justify-between items-center p-3 bg-gray-50 rounded border border-gray-200">
+                      <div>
+                        <span className="font-medium mr-2">Attempts:</span>
+                        <span>{attempts}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium mr-2">Time:</span>
+                        <span>{feedback.result.time} sec</span>
+                      </div>
+                    </div>
+  
+                    <div>
+                      <span className="font-medium block mb-2">Test Results:</span>
+                      <div className="flex flex-wrap gap-2">
+                        {feedback.testResults?.map((result, index) => (
+                          <div 
+                            key={index} 
+                            className={`px-3 py-1 rounded-full text-sm font-medium 
+                              ${result.pass 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-red-100 text-red-800'
+                              }`}
+                          >
+                            Test {index + 1} {result.pass ? '✅' : '❌'}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )
+              ) : (
+                <div className="flex items-center justify-center h-32 border border-dashed border-gray-300 rounded text-gray-500 text-base">
+                  No feedback yet. Run your code to see results.
                 </div>
-              )
-            ) : (
-              <div className="flex items-center justify-center h-32 border border-dashed border-gray-300 rounded text-gray-500 text-base">
-                No feedback yet. Run your code to see results.
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
 }
