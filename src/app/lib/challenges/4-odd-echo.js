@@ -8,6 +8,7 @@ Input Constraints:
 - Following N lines each contain one word
 - Each word contains only lowercase letters 'a-z'
 - Each word is at most 100 letters long
+- Oddness can be easily calculated with modulus of two!
 
 Example:
 Input:
