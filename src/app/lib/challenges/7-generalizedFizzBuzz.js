@@ -31,11 +31,11 @@ export const generalizedFizzBuzzChallenge = {
         },
         {
             input: "100 2 5\n",
-            expected_output: "50 20 10\n"
+            expected_output: "40 10 10\n"
         },
         {
             input: "1000 3 7\n",
-            expected_output: "333 142 47\n"
+            expected_output: "286 95 47\n"
         }
     ],
 
