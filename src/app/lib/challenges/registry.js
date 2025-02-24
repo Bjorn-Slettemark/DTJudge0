@@ -8,6 +8,7 @@ import { sortNumbersChallenge } from './5-sort-numbers';
 import { hippHurraChallenge } from './6-hipp-hurra';
 import { generalizedFizzBuzzChallenge } from './7-generalizedFizzBuzz';
 import { helloWorldChallenge } from './0-hello-world';
+import { alternatingPositionCipherChallenge } from './8-hello-world';
 
 // Map challenges to their numeric IDs
 export const challenges = {
@@ -20,8 +21,10 @@ export const challenges = {
     "4": oddEchoChallenge,
     "5": sortNumbersChallenge,
     "6": hippHurraChallenge,
-    "7": generalizedFizzBuzzChallenge
+    "7": generalizedFizzBuzzChallenge,
+    "8": alternatingPositionCipherChallenge
 
+    
 
 };
 
