@@ -3,17 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import AceEditor from "react-ace";
-
-// Update imports to use the correct paths
-import { getChallenge } from "../../lib/challenges/registry";
-import { preprocessCode } from "../../lib/judge-wrapper";
-
-// Import Ace modes and themes
 import "ace-builds/src-noconflict/mode-javascript";
 import "ace-builds/src-noconflict/theme-github";
-
-// Import confetti animation
 import ReactConfetti from "react-confetti";
+import { getChallenge } from "../../lib/challenges/registry";
+import { preprocessCode } from "../../lib/judge-wrapper";
 
 export default function ChallengePage() {
   const { challengeId } = useParams();
@@ -22,35 +16,32 @@ export default function ChallengePage() {
   const [loading, setLoading] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [challenge, setChallenge] = useState(null);
-  const [confetti, setConfetti] = useState(false); // State to trigger confetti
+  const [confetti, setConfetti] = useState(false);
   const [width, setWidth] = useState(0);
   const [height, setHeight] = useState(0);
 
-  // Only run the following code on the client side
+  // Handle window resize for confetti
   useEffect(() => {
     if (typeof window !== "undefined") {
       setWidth(window.innerWidth);
       setHeight(window.innerHeight);
-
-      // Update width and height on window resize
       const handleResize = () => {
         setWidth(window.innerWidth);
         setHeight(window.innerHeight);
       };
-
       window.addEventListener("resize", handleResize);
-
-      return () => {
-        window.removeEventListener("resize", handleResize);
-      };
+      return () => window.removeEventListener("resize", handleResize);
     }
   }, []);
 
+  // Load challenge and code from localStorage
   useEffect(() => {
     const currentChallenge = getChallenge(challengeId);
     if (currentChallenge) {
       setChallenge(currentChallenge);
-      setCode(currentChallenge.defaultCode);
+      // Check localStorage for saved code
+      const savedCode = localStorage.getItem(`challenge_${challengeId}_code`);
+      setCode(savedCode || currentChallenge.defaultCode);
     } else {
       setCode("// Challenge not found.");
     }
@@ -58,16 +49,22 @@ export default function ChallengePage() {
     setFeedback(null);
   }, [challengeId]);
 
+  // Save code to localStorage whenever it changes
+  useEffect(() => {
+    if (challenge && code !== challenge.defaultCode) {
+      localStorage.setItem(`challenge_${challengeId}_code`, code);
+    }
+  }, [code, challenge, challengeId]);
+
   const handleRun = async () => {
     if (!challenge) return;
 
     setAttempts((prev) => prev + 1);
     setLoading(true);
     setFeedback(null);
-    setConfetti(false); // Reset confetti
+    setConfetti(false);
 
     try {
-      // Run all test cases
       const results = await Promise.all(
         challenge.testCases.map(async (testCase, index) => {
           const payload = {
@@ -93,7 +90,6 @@ export default function ChallengePage() {
         })
       );
 
-      // Check if all test cases passed
       const allPassed = results.every((r) => r.pass);
       const firstFailed = results.find((r) => !r.pass);
 
@@ -105,7 +101,7 @@ export default function ChallengePage() {
       });
 
       if (allPassed) {
-        setConfetti(true); // Trigger confetti when all tests pass
+        setConfetti(true);
       }
     } catch (error) {
       console.error(error);
@@ -122,7 +118,6 @@ export default function ChallengePage() {
   return (
     <div className="min-h-screen bg-white p-4">
       <div className="w-full bg-white shadow-md rounded-lg overflow-hidden">
-        {/* Challenge Header */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-2">
             <h1 className="text-2xl font-bold text-gray-800">{challenge.title}</h1>
@@ -131,7 +126,6 @@ export default function ChallengePage() {
         </div>
 
         <div className="flex flex-col md:flex-row">
-          {/* Code Editor Section */}
           <div className="flex-1 p-4 border-b md:border-b-0 md:border-r border-gray-200">
             <h2 className="text-xl font-medium text-gray-800 mb-3">Code Editor</h2>
             <div className="border border-gray-200 rounded-md overflow-hidden">
@@ -161,7 +155,6 @@ export default function ChallengePage() {
             </button>
           </div>
 
-          {/* Status / Feedback Panel */}
           <div className="w-full md:w-1/3 p-4">
             <h2 className="text-xl font-medium text-gray-800 mb-3">Status</h2>
             {feedback ? (
@@ -206,7 +199,6 @@ export default function ChallengePage() {
                       ))}
                     </div>
 
-                    {/* ---- ADDING OUTPUT SECTION FOR EACH TEST ---- */}
                     <div className="space-y-2">
                       {feedback.testResults?.map((test, index) => (
                         <div key={index} className="bg-gray-50 p-3 rounded-md border border-gray-200">
@@ -229,7 +221,6 @@ export default function ChallengePage() {
         </div>
       </div>
 
-      {/* Confetti animation trigger */}
       {confetti && <ReactConfetti width={width} height={height} />}
     </div>
   );

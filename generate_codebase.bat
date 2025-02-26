@@ -1,1 +1,1 @@
-code2prompt /Dev/DigitaleTalenter/Judge0/judge0/ --output output.md
+code2prompt /Dev/DigitaleTalenter/Judge0/judge0/ --include "*.js" --output output.md
